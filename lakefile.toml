@@ -1,0 +1,10 @@
+name = "m_beklemishev"
+version = "0.1.0"
+defaultTargets = ["m_beklemishev"]
+
+[[lean_lib]]
+name = "MBeklemishev"
+
+[[lean_exe]]
+name = "m_beklemishev"
+root = "Main"
