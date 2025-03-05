@@ -5,8 +5,8 @@ mutual
   def pSet (seq : List Nat) (n : Nat) : List Nat :=
     match n with
     | 0 => []
-    | n' + 1 =>
-      match p seq n' with
+    | n + 1 =>
+      match p seq n with
       | none => []
       | some ppn => (List.range ppn).filter (fun i => seq.drop i < seq.drop ppn)
 
@@ -60,22 +60,22 @@ def innerLoop (seq : List Nat) (pList : List (Option Nat)) (p_m limit k : Nat)
   have n_def : n = limit - k := rfl
   match k with
   | 0 => none
-  | k' + 1 =>
-    have k'_lt_lim : k' < limit :=
+  | k + 1 =>
+    have k_lt_lim : k < limit :=
       by exact Nat.lt_of_succ_le h0
-    have lim_sub_k'_le_pListLen : limit - k' ≤ pList.length :=
-      by exact Nat.le_trans (Nat.sub_le limit k') h1
+    have lim_sub_k'_le_pListLen : limit - k ≤ pList.length :=
+      by exact Nat.le_trans (Nat.sub_le limit k) h1
     have n_lt_pListLen : n < pList.length :=
       by
         rw [n_def, Nat.sub_succ]
         apply Nat.lt_of_succ_lt_succ
-        rw [Nat.succ_pred_eq_of_pos (Nat.sub_pos_of_lt k'_lt_lim)]
+        rw [Nat.succ_pred_eq_of_pos (Nat.sub_pos_of_lt k_lt_lim)]
         apply Nat.lt_succ_of_le lim_sub_k'_le_pListLen
     match pList[n]'n_lt_pListLen, pList[n-1] with
     | some pn, some ppn =>
       if seq.extract p_m (u seq p_m n) < seq.extract pn ppn
       then some (fp seq p_m n)
-      else innerLoop seq pList p_m limit k' (Nat.le_of_lt k'_lt_lim) h1 lim_sub_k'_le_pListLen
+      else innerLoop seq pList p_m limit k (Nat.le_of_lt k_lt_lim) h1 lim_sub_k'_le_pListLen
     | _, _ => none
 
 def tp (seq : List Nat) (pList : List (Option Nat)) (k : Nat)
@@ -83,7 +83,7 @@ def tp (seq : List Nat) (pList : List (Option Nat)) (k : Nat)
 (h2 : ∀(i : Fin pList.length) (p_i : Nat), pList[i] = some p_i -> p_i < seq.length) : Option Nat :=
   let m := pList.length - 1 - k
   have m_def : m = pList.length - 1 - k := rfl
-  match level_def : pList.length - 1 with
+  match pList.length - 1 with
   | 0 => some (seq.length - 2)
   | level + 1 =>
     have m_lt_plistLen : m < pList.length :=
@@ -103,9 +103,9 @@ def tp (seq : List Nat) (pList : List (Option Nat)) (k : Nat)
               exact Nat.le_trans (min_le_right level m) (Nat.le_of_lt m_lt_plistLen)
           have lim_sub_lim_add_1_le_pListList : limit - (limit - 1) ≤ pList.length :=
             by
-              cases limit'_def : limit with
+              cases limit with
               | zero => simp
-              | succ limit' =>
+              | succ limit =>
                 refine Nat.sub_le_iff_le_add'.mpr ?_
                 refine Nat.add_le_add ?_ ?_
                 simp
@@ -113,10 +113,9 @@ def tp (seq : List Nat) (pList : List (Option Nat)) (k : Nat)
           match innerLoop seq pList p_m limit (limit - 1) (Nat.pred_le limit) lim_le_pListLen lim_sub_lim_add_1_le_pListList with
           | some rev => some rev
           | none =>
-            match k'_def : k with
+            match k with
             | 0 => some (fp seq p_m level)
-            | k' + 1 =>
-              tp seq pList k' h0 (Nat.lt_of_succ_lt h1) h2
+            | k + 1 => tp seq pList k h0 (Nat.lt_of_succ_lt h1) h2
 
 def expand (seq : List Nat) (level n : Nat) : List Nat :=
   let p_0 := seq.length - 1
@@ -129,27 +128,28 @@ def expand (seq : List Nat) (level n : Nat) : List Nat :=
         exact List.cons_ne_nil x xs
     match seq.getLast seq_ne_emp with
     | 0 => seq.take p_0
-    | seqlast' + 1 =>
+    | seqlast + 1 =>
       let pList := (List.range (level + 1)).map (p seq)
       have pList_def : pList = (List.range (level + 1)).map (p seq) := rfl
       have pList_is_def (i : Fin pList.length) (p_i : Nat) (hh : pList[i] = some p_i) : p_i < seq.length :=
         by
           simp [pList_def] at hh
           have h : p seq i.val = some p_i :=
-          by simpa using hh
+            by simpa using hh
           exact p_lt_seqLength p_i seq_ne_emp h
       have level_pred_lt_pListLen : level - 1 < pList.length :=
         by
-          have h : pList.length = level + 1 := by simp [pList]
+          have h : pList.length = level + 1 :=
+            by simp [pList]
           rw [h]
           exact Nat.sub_lt_succ level 1
       match tp seq pList (level - 1) seq_ne_emp level_pred_lt_pListLen pList_is_def with
       | none =>
-        let bp := seq.take p_0 ++ [seqlast']
+        let bp := seq.take p_0 ++ [seqlast]
         (List.replicate n bp).flatten
       | some parent =>
         let gp := seq.take (parent + 1)
-        let bp := seq.extract (parent + 1) p_0 ++ [seqlast']
+        let bp := seq.extract (parent + 1) p_0 ++ [seqlast]
         gp ++ (List.replicate n bp).flatten
 
-#eval expand [2,1,2] 2 4 -- [1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
+#eval expand [2,1,1,1,2] 4 4 -- [1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]

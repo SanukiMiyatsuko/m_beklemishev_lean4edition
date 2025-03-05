@@ -12,3 +12,8 @@ root = "Main"
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
+
+[[require]]
+name = "batteries"
+scope = "leanprover-community"
+rev = "main"
