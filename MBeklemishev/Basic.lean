@@ -26,10 +26,10 @@ theorem p_lt_seqLength {m : Nat} {seq : List Nat}
       apply Nat.sub_lt_self
       simp
       exact List.length_pos_iff.mpr h0
-    | succ m' =>
+    | succ m =>
       simp [p] at h1
       simp [pSet] at h1
-      cases h' : p seq m' with
+      cases h' : p seq m with
       | none =>
         rw [h'] at h1
         simp at h1
@@ -105,7 +105,7 @@ def tp (seq : List Nat) (pList : List (Option Nat)) (k : Nat)
             by
               cases limit with
               | zero => simp
-              | succ limit =>
+              | _ =>
                 refine Nat.sub_le_iff_le_add'.mpr ?_
                 refine Nat.add_le_add ?_ ?_
                 simp
