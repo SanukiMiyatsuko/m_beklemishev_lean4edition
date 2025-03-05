@@ -152,4 +152,4 @@ def expand (seq : List Nat) (level n : Nat) : List Nat :=
         let bp := seq.extract (parent + 1) p_0 ++ [seqlast]
         gp ++ (List.replicate n bp).flatten
 
-#eval expand [2,1,1,1,2] 4 4 -- [1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
+#eval expand [2,1,1,1,2] 4 4 -- [2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1]
