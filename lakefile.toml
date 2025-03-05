@@ -8,3 +8,7 @@ name = "MBeklemishev"
 [[lean_exe]]
 name = "m_beklemishev"
 root = "Main"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
