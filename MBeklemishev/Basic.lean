@@ -42,8 +42,9 @@ theorem parent_lt_seqLength {m p_m : Nat} {seq : List Nat}
             apply List.max?_mem
             exact max_choice
             exact h1
-        have mem_range : p_m ∈ List.range p' := (List.mem_filter.mp mem_max).left
-        refine Nat.lt_trans (List.mem_range.mp mem_range) ?_
+        apply Nat.lt_trans
+        apply List.mem_range.mp
+        exact (List.mem_filter.mp mem_max).left
         exact parent_lt_seqLength h0 h'
 
 def uncle (seq : List Nat) (x : Nat) (n : Nat) : Nat :=
@@ -99,11 +100,9 @@ def expand (seq : List Nat) (n level : Nat) : List Nat :=
   | some 0 => initseq
   | some (seqlast' + 1) =>
     have seq_ne_emp : seq ≠ [] :=
-      by
-        refine List.getLast?_isSome.mp ?_
-        exact
-          Std.Tactic.BVDecide.Reflect.Bool.lemma_congr (some seqlast'.succ).isSome
-            seq.getLast?.isSome (congrArg Option.isSome h) rfl
+      List.getLast?_isSome.mp
+        (Std.Tactic.BVDecide.Reflect.Bool.lemma_congr (some seqlast'.succ).isSome
+          seq.getLast?.isSome (congrArg Option.isSome h) rfl)
     match trueParent seq level seq_ne_emp with
     | none =>
       let bp := initseq ++ [seqlast']
