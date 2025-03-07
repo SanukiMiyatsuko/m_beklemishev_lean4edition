@@ -5,19 +5,20 @@ mutual
   def parentCandidates (seq : List Nat) (n : Nat) : List Nat :=
     match n with
     | 0 => []
-    | n + 1 =>
-      match parent seq n with
+    | n' + 1 =>
+      match parent seq n' with
       | none => []
-      | some ppn => (List.range ppn).filter (fun i => seq.drop i < seq.drop ppn)
+      | some pp => (List.range pp).filter (fun i => seq.drop i < seq.drop pp)
 
   def parent (seq : List Nat) (n : Nat) : Option Nat :=
-    if n = 0
-    then some (seq.length - 1)
-    else (parentCandidates seq n).max?
+    if n = 0 then
+      some (seq.length - 1)
+    else
+      parentCandidates seq n |>.max?
 end
 
-theorem parent_lt_seqLength {m : Nat} {seq : List Nat}
-(p_m : Nat) (h0 : seq ≠ []) (h1 : parent seq m = some p_m) : p_m < seq.length :=
+theorem parent_lt_seqLength {m p_m : Nat} {seq : List Nat}
+(h0 : seq ≠ []) (h1 : parent seq m = some p_m) : p_m < seq.length :=
   by
     cases m with
     | zero =>
@@ -41,115 +42,75 @@ theorem parent_lt_seqLength {m : Nat} {seq : List Nat}
             apply List.max?_mem
             exact max_choice
             exact h1
-        have mem_range : p_m ∈ List.range p' :=
-          by exact (List.mem_filter.mp mem_max).left
-        exact Nat.lt_trans (List.mem_range.mp mem_range) (parent_lt_seqLength p' h0 h')
+        have mem_range : p_m ∈ List.range p' := (List.mem_filter.mp mem_max).left
+        refine Nat.lt_trans (List.mem_range.mp mem_range) ?_
+        exact parent_lt_seqLength h0 h'
 
-def uncle (seq : List Nat) (x n : Nat) : Nat :=
+def uncle (seq : List Nat) (x : Nat) (n : Nat) : Nat :=
   let filterd := (parentCandidates seq n).filter (fun i => x < i)
   filterd.min?.getD (seq.length - 1)
 
-def fosterParent (seq : List Nat) (x n : Nat) : Nat :=
+def fosterParent (seq : List Nat) (x : Nat) (n : Nat) : Nat :=
   match n with
   | 0 => x
   | n' + 1 => fosterParent seq (uncle seq x n) n'
 
-def innerLoop (seq : List Nat) (pList : List (Option Nat)) (p_m limit k : Nat)
-(h0 : k ≤ limit) (h1 : limit ≤ pList.length) (h2 : limit - k ≤ pList.length) : Option Nat :=
-  let n := limit - k
-  have n_def : n = limit - k := rfl
-  match k with
-  | 0 => none
-  | k + 1 =>
-    have k_lt_lim : k < limit :=
-      by exact Nat.lt_of_succ_le h0
-    have lim_sub_k'_le_pListLen : limit - k ≤ pList.length :=
-      by exact Nat.le_trans (Nat.sub_le limit k) h1
-    have n_lt_pListLen : n < pList.length :=
-      by
-        rw [n_def, Nat.sub_succ]
-        apply Nat.lt_of_succ_lt_succ
-        rw [Nat.succ_pred_eq_of_pos (Nat.sub_pos_of_lt k_lt_lim)]
-        apply Nat.lt_succ_of_le lim_sub_k'_le_pListLen
-    match pList[n]'n_lt_pListLen, pList[n-1] with
-    | some pn, some ppn =>
-      if seq.extract p_m (uncle seq p_m n) < seq.extract pn ppn
-      then some (fosterParent seq p_m n)
-      else innerLoop seq pList p_m limit k (Nat.le_of_lt k_lt_lim) h1 lim_sub_k'_le_pListLen
+def innerLoop (seq : List Nat) (p_m limit : Nat) : Option Nat :=
+  let results := List.ofFn (fun (i : Fin (limit - 1)) =>
+    let n : Nat := i + 1
+    match parent seq n, parent seq i with
+    | some p_n, some p_pn =>
+      if seq.extract p_m (uncle seq p_m n) < seq.extract p_n p_pn
+      then
+        some (fosterParent seq p_m n)
+      else
+        none
     | _, _ => none
+  )
+  results.filterMap id |>.head?
 
-def trueParent (seq : List Nat) (pList : List (Option Nat)) (k : Nat)
-(h0 : seq ≠ []) (h1 : k < pList.length)
-(h2 : ∀(i : Fin pList.length) (p_i : Nat), pList[i] = some p_i -> p_i < seq.length) : Option Nat :=
-  let m := pList.length - 1 - k
-  have m_def : m = pList.length - 1 - k := rfl
-  match pList.length - 1 with
+def trueParent (seq : List Nat) (level : Nat) (h0 : seq ≠ []) : Option Nat :=
+  match level with
   | 0 => some (seq.length - 2)
-  | level + 1 =>
-    have m_lt_plistLen : m < pList.length :=
-      by
-        rw [m_def]
-        exact Nat.sub_one_sub_lt_of_lt h1
-    match pListm_eq_some_pm : pList[m]'m_lt_plistLen with
-    | none => none
-    | some p_m =>
-        if seq[p_m]'(h2 ⟨m, m_lt_plistLen⟩ p_m pListm_eq_some_pm) < seq.getLast h0 - 1
-        then some p_m
-        else let limit := level ⊓ m
-          have lim_def : limit = level ⊓ m := rfl
-          have lim_le_pListLen : limit ≤ pList.length :=
-            by
-              rw [lim_def]
-              exact Nat.le_trans (min_le_right level m) (Nat.le_of_lt m_lt_plistLen)
-          have lim_sub_lim_add_1_le_pListList : limit - (limit - 1) ≤ pList.length :=
-            by
-              cases limit with
-              | zero => simp
-              | _ =>
-                refine Nat.sub_le_iff_le_add'.mpr ?_
-                refine Nat.add_le_add ?_ ?_
-                simp
-                exact Nat.one_le_of_lt h1
-          match innerLoop seq pList p_m limit (limit - 1) (Nat.pred_le limit) lim_le_pListLen lim_sub_lim_add_1_le_pListList with
-          | some rev => some rev
-          | none =>
-            match k with
-            | 0 => some (fosterParent seq p_m level)
-            | k + 1 => trueParent seq pList k h0 (Nat.lt_of_succ_lt h1) h2
+  | level' + 1 =>
+    let candidates := List.ofFn (fun (i : Fin level) =>
+      let m : Nat := i + 1
+      match h : parent seq m with
+      | none => none
+      | some p_m =>
+        if seq[p_m]'(parent_lt_seqLength h0 h) < seq.getLast h0 - 1 then
+          some p_m
+        else
+          innerLoop seq p_m (level' ⊓ m)
+    )
+    match candidates.find? (fun c => c.isSome) with
+    | some (some candidate) => some candidate
+    | some none => none
+    | none =>
+      match parent seq level with
+      | none => none
+      | some pLevel => some (fosterParent seq pLevel level')
 
-def expand (seq : List Nat) (level n : Nat) : List Nat :=
+def expand (seq : List Nat) (n level : Nat) : List Nat :=
   let p_0 := seq.length - 1
-  match h : seq with
-  | [] => []
-  | x :: xs =>
+  let initseq := seq.take p_0
+  match h : seq.getLast? with
+  | none => []
+  | some 0 => initseq
+  | some (seqlast' + 1) =>
     have seq_ne_emp : seq ≠ [] :=
       by
-        rw [h]
-        exact List.cons_ne_nil x xs
-    match seq.getLast seq_ne_emp with
-    | 0 => seq.take p_0
-    | seqlast + 1 =>
-      let pList := (List.range (level + 1)).map (parent seq)
-      have pList_def : pList = (List.range (level + 1)).map (parent seq) := rfl
-      have pList_is_def (i : Fin pList.length) (p_i : Nat) (hh : pList[i] = some p_i) : p_i < seq.length :=
-        by
-          simp [pList_def] at hh
-          have h : parent seq i.val = some p_i :=
-            by simpa using hh
-          exact parent_lt_seqLength p_i seq_ne_emp h
-      have level_pred_lt_pListLen : level - 1 < pList.length :=
-        by
-          have h : pList.length = level + 1 :=
-            by simp [pList]
-          rw [h]
-          exact Nat.sub_lt_succ level 1
-      match trueParent seq pList (level - 1) seq_ne_emp level_pred_lt_pListLen pList_is_def with
-      | none =>
-        let bp := seq.take p_0 ++ [seqlast]
-        (List.replicate n bp).flatten
-      | some parent =>
-        let gp := seq.take (parent + 1)
-        let bp := seq.extract (parent + 1) p_0 ++ [seqlast]
-        gp ++ (List.replicate n bp).flatten
+        refine List.getLast?_isSome.mp ?_
+        exact
+          Std.Tactic.BVDecide.Reflect.Bool.lemma_congr (some seqlast'.succ).isSome
+            seq.getLast?.isSome (congrArg Option.isSome h) rfl
+    match trueParent seq level seq_ne_emp with
+    | none =>
+      let bp := initseq ++ [seqlast']
+      List.replicate n bp |>.flatten
+    | some parent =>
+      let gp := seq.take (parent + 1)
+      let bp := seq.extract (parent + 1) p_0 ++ [seqlast']
+      gp ++ (List.replicate n bp).flatten
 
-#eval expand [2,1,1,1,2] 4 4 -- [2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1]
+#eval expand [1,0,0,1,0,0,0,0,1,0,0,1] 3 4
