@@ -83,11 +83,11 @@ theorem parent_some_down (h0 : n < m) (h1 : parent seq m = some p_m) : ∃ p_n, 
   rw [h1] at hn
   contradiction
 
-def uncle (seq : List Nat) (x : Nat) (n : Nat) : Nat :=
+def uncle (seq : List Nat) (x n : Nat) : Nat :=
   let filterd := (parentCandidates seq n).filter (fun i => x < i)
   filterd.head?.getD seq.length
 
-def fosterParent (seq : List Nat) (x : Nat) (n : Nat) : Nat :=
+def fosterParent (seq : List Nat) (x n : Nat) : Nat :=
   match n with
   | 0 => x
   | n' + 1 => fosterParent seq (uncle seq x n) n'
