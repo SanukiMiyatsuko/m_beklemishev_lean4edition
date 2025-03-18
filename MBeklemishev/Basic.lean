@@ -16,7 +16,8 @@ mutual
     parentCandidates seq n |>.getLast?
 end
 
-theorem parent_lt_seqLength (h0 : seq ≠ []) (h1 : parent seq m = some p_m) : p_m < seq.length := by
+theorem parent_lt_seqLength (h0 : seq ≠ []) (h1 : parent seq m = some p_m)
+: p_m < seq.length := by
   cases m with
   | zero =>
     simp [parent] at h1
@@ -51,7 +52,8 @@ theorem parent_lt_seqLength (h0 : seq ≠ []) (h1 : parent seq m = some p_m) : p
       case succ.some.a =>
         exact parent_lt_seqLength h0 h'
 
-theorem parent_none_up (h0 : n < m) (h1 : parent seq n = none) : parent seq m = none := by
+theorem parent_none_up (h0 : n < m) (h1 : parent seq n = none)
+: parent seq m = none := by
   obtain ⟨k, hk⟩ : ∃ k, m = n + 1 + k := Nat.exists_eq_add_of_le h0
   cases k with
   | zero =>
@@ -61,21 +63,22 @@ theorem parent_none_up (h0 : n < m) (h1 : parent seq n = none) : parent seq m = 
     simp [parentCandidates]
     rw [h1]
   | succ k' =>
-    set m' := n + 1 + k' with m'_def
-    have m_eq_succm' : m = m'.succ := by
-      rw [hk, m'_def]
+    set m' := n + 1 + k' with h2
+    have h3 : m = m'.succ := by
+      rw [hk, h2]
       rfl
-    rw [m_eq_succm']
+    rw [h3]
     simp [parent]
     simp [parentCandidates]
     have ih : parent seq m' = none := by
       refine parent_none_up ?_ h1
-      rw [m'_def]
+      rw [h2]
       apply Nat.lt_add_right k'
       exact Nat.lt_add_one n
     rw [ih]
 
-theorem parent_some_down (h0 : n < m) (h1 : parent seq m = some p_m) : ∃ p_n, parent seq n = some p_n := by
+theorem parent_some_down (h0 : n < m) (h1 : parent seq m = some p_m)
+: ∃ p_n, parent seq n = some p_n := by
   by_contra hn
   push_neg at hn
   apply Option.eq_none_iff_forall_not_mem.mpr at hn
@@ -164,17 +167,13 @@ def expand_M_bek (seq : List Nat) (n level : Nat) : List Nat :=
 instance : Std.Irrefl (fun (x y : ℕ) => x < y) :=
   ⟨Nat.lt_irrefl⟩
 
-theorem lt_right_append (list0 list1 list2 : List Nat) (h0 : list0 < list2) (h1 : list2.length ≤ list0.length) : list0 ++ list1 < list2 := by
-  by_cases h2 : list1 = []
-  case pos =>
-    rw [h2]
-    simp_all
-  case neg =>
-    rw [<-ne_eq] at h2
-    have h3 : [] < list1 := by
-      cases list1 with
-      | nil => simp_all
-      | cons _ _ => simp
+theorem lt_right_append {α : Type} [LT α] {list0 list1 list2 : List α}
+(h0 : list0 < list2) (h1 : list2.length ≤ list0.length)
+: list0 ++ list1 < list2 := by
+  cases h2 : list1 with
+  | nil => simp_all
+  | _ =>
+    rw [<-h2]
     cases list2 with
     | nil => contradiction
     | cons b bs =>
@@ -183,91 +182,76 @@ theorem lt_right_append (list0 list1 list2 : List Nat) (h0 : list0 < list2) (h1 
       | cons a as =>
         simp
         apply List.cons_lt_cons_iff.mpr
-        apply List.cons_lt_cons_iff.mp at h0
-        cases h0 with
-        | inl h0 =>
-          left
-          exact h0
-        | inr h0 =>
-          obtain ⟨h00, h01⟩ := h0
-          right
-          constructor
-          case cons.cons.inr.intro.h.left =>
-            exact h00
-          case cons.cons.inr.intro.h.right =>
-            simp at h1
-            exact lt_right_append as list1 bs h01 h1
+        exact match List.cons_lt_cons_iff.mp h0 with
+        | Or.inl h => Or.inl h
+        | Or.inr ⟨h00, h01⟩ =>
+          Or.inr ⟨h00, lt_right_append h01 (Nat.le_of_lt_succ h1)⟩
 
-theorem lt_append_replicate_flatten (list0 list1 list2 : List Nat) (n : Nat) (h0 : list0 ++ list1 < list2) (h1 : list2.length ≤ (list0 ++ list1).length) : list0 ++ (List.replicate n list1).flatten < list2 := by
+theorem lt_append_replicate_flatten {α : Type} [LT α]
+[i₁ : Trans (fun (x1 x2 : α) => x1 < x2) (fun (x1 x2 : α) => x1 < x2) fun (x1 x2 : α) => x1 < x2] {list1 list2 : List α}
+(list0 : List α) (n : Nat) (h0 : list0 ++ list1 < list2) (h1 : list2.length ≤ (list0 ++ list1).length)
+: list0 ++ (List.replicate n list1).flatten < list2 := by
   cases n with
   | zero =>
-    by_cases h2 : list1 = []
-    case pos =>
-      rw [h2] at h0
-      simp_all
-    case neg =>
-      rw [<-ne_eq] at h2
-      have h2 : [] < list1 := by
-        cases list1 with
-        | nil => simp_all
-        | cons _ _ => simp
-      have h4 : list0 < list0 ++ list1 := by
-        nth_rw 1 [<-List.append_nil list0]
-        exact List.append_left_lt h2
+    cases h2 : list1 with
+    | nil => simp_all
+    | _ =>
       simp
-      exact List.lt_trans h4 h0
+      trans list0 ++ list1
+      · show list0 < list0 ++ list1
+        nth_rw 1 [<-List.append_nil list0]
+        apply List.append_left_lt
+        aesop
+      · show list0 ++ list1 < list2
+        exact h0
   | succ n' =>
     simp [List.replicate]
     rw [<-List.append_assoc]
-    exact lt_right_append (list0 ++ list1) ((List.replicate n' list1).flatten) list2 h0 h1
+    exact lt_right_append h0 h1
 
--- expandの単調減少性
-theorem expand_mon_dec (h0 : seq ≠ []) : expand seq n f < seq := by
+theorem expand_mon_dec (h0 : seq ≠ [])
+: expand seq n f < seq := by
   simp [expand]
-  set initseq := seq.dropLast with h1
-  have h2 : initseq < seq := by
+  set initseq := seq.dropLast with initseq_def
+  split
+  case h_1 => simp_all
+  case h_2 =>
     induction seq with
     | nil => contradiction
     | cons a as ih =>
       cases as with
       | nil =>
-        simp at h1
-        rw [h1]
+        simp at initseq_def
+        rw [initseq_def]
         simp
       | cons b bs => simp_all
-  split
-  case h_1 => simp_all
-  case h_2 => exact h2
   case h_3 seqlast' h3 =>
-    set seqlast := seq.getLast h0
-    have h4 : seqlast = seqlast'.succ :=
-      (List.getLast_eq_iff_getLast?_eq_some h0).mpr h3
-    set bp' := initseq ++ [seqlast'] with h5
-    have h6 : bp' < seq := by
-      have h6 : seq = initseq ++ [seqlast'.succ] := by
-        rw [<-h4]
+    let seqlast := seq.getLast h0
+    set bp' := initseq ++ [seqlast'] with bp'_def
+    have bp'_lt_seq : bp' < seq := by
+      have h : seq = initseq ++ [seqlast'.succ] := by
+        rw [<-(List.getLast_eq_iff_getLast?_eq_some h0).mpr h3]
         exact Eq.symm (List.dropLast_concat_getLast h0)
-      rw [h6, h5]
+      rw [h, bp'_def]
       apply List.append_left_lt
       apply List.cons_lt_cons_iff.mpr
       left
       exact Nat.lt_add_one seqlast'
-    have h7 : bp'.length = seq.length := by
-      rw [h5, List.length_append, List.length_dropLast seq]
+    have seq_length_le_bp'_length : seq.length ≤ bp'.length := by
+      rw [bp'_def, List.length_append, List.length_dropLast seq]
       simp
-      apply Nat.sub_one_add_one_eq_of_pos
+      refine Nat.le_of_eq ?_
+      refine Eq.symm (Nat.sub_one_add_one_eq_of_pos ?_)
       exact List.length_pos_iff.mpr h0
     split
     case h_1 =>
       simp [List.replicate]
-      exact lt_append_replicate_flatten [] bp' seq n h6 (Nat.le_of_eq (id (Eq.symm h7)))
+      exact lt_append_replicate_flatten [] n bp'_lt_seq seq_length_le_bp'_length
     case h_2 parent h8 =>
-      set gp := initseq.take (↑parent + 1) with h9
-      set bp := (initseq.drop (↑parent + 1)) ++ [seqlast'] with h10
-      have h11 : gp ++ initseq.drop (↑parent + 1) = initseq :=
-        List.take_append_drop (↑parent + 1) initseq
-      have h12 : bp' = gp ++ bp := by
-        rw [h10, <-List.append_assoc, h11]
-      rw [h12] at h6
-      rw [h12] at h7
-      exact lt_append_replicate_flatten gp bp seq n h6 (Nat.le_of_eq (id (Eq.symm h7)))
+      let gp := initseq.take (parent + 1)
+      set bp := (initseq.drop (parent + 1)) ++ [seqlast'] with bp_def
+      have bp'_eq_gp_append_bp : bp' = gp ++ bp := by
+        rw [bp_def, <-List.append_assoc, List.take_append_drop (parent + 1) initseq]
+      rw [bp'_eq_gp_append_bp] at bp'_lt_seq
+      rw [bp'_eq_gp_append_bp] at seq_length_le_bp'_length
+      exact lt_append_replicate_flatten gp n bp'_lt_seq seq_length_le_bp'_length
