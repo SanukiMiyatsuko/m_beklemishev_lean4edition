@@ -63,16 +63,16 @@ theorem parent_none_up (h0 : n < m) (h1 : parent seq n = none)
     simp [parentCandidates]
     rw [h1]
   | succ k' =>
-    set m' := n + 1 + k' with h2
-    have h3 : m = m'.succ := by
-      rw [hk, h2]
+    set m' := n + 1 + k' with m'_def
+    have m_eq_m'succ : m = m'.succ := by
+      rw [hk, m'_def]
       rfl
-    rw [h3]
+    rw [m_eq_m'succ]
     simp [parent]
     simp [parentCandidates]
     have ih : parent seq m' = none := by
       refine parent_none_up ?_ h1
-      rw [h2]
+      rw [m'_def]
       apply Nat.lt_add_right k'
       exact Nat.lt_add_one n
     rw [ih]
@@ -140,22 +140,22 @@ def trueParent (level : Nat) (seq : List Nat) (h0 : seq ≠ []) : Option Nat :=
 
 def expand (seq : List Nat) (n : Nat)
 (f : (list : List Nat) -> list ≠ [] -> Option Nat) : List Nat :=
-  let initseq := seq.dropLast
+  let initSeq := seq.dropLast
   match h : seq.getLast? with
   | none => []
-  | some 0 => initseq
-  | some (seqlast' + 1) =>
+  | some 0 => initSeq
+  | some (seqLast' + 1) =>
     have seq_ne_emp : seq ≠ [] :=
       List.getLast?_isSome.mp
-        (Std.Tactic.BVDecide.Reflect.Bool.lemma_congr (some seqlast'.succ).isSome
+        (Std.Tactic.BVDecide.Reflect.Bool.lemma_congr (some seqLast'.succ).isSome
           seq.getLast?.isSome (congrArg Option.isSome h) rfl)
     match f seq seq_ne_emp with
     | none =>
-      let bp := initseq.concat seqlast'
+      let bp := initSeq.concat seqLast'
       List.replicate n bp |>.flatten
     | some parent =>
-      let gp := initseq.take (parent + 1)
-      let bp := (initseq.drop (parent + 1)).concat seqlast'
+      let gp := initSeq.take (parent + 1)
+      let bp := (initSeq.drop (parent + 1)).concat seqLast'
       gp ++ (List.replicate n bp).flatten
 
 def expand_M_bek (seq : List Nat) (n level : Nat) : List Nat :=
@@ -170,10 +170,10 @@ instance : Std.Irrefl (fun (x y : ℕ) => x < y) :=
 theorem lt_right_append {α : Type} [LT α] {list0 list1 list2 : List α}
 (h0 : list0 < list2) (h1 : list2.length ≤ list0.length)
 : list0 ++ list1 < list2 := by
-  cases h2 : list1 with
+  cases list1_def : list1 with
   | nil => simp_all
   | _ =>
-    rw [<-h2]
+    rw [<-list1_def]
     cases list2 with
     | nil => contradiction
     | cons b bs =>
@@ -193,7 +193,7 @@ theorem lt_append_replicate_flatten {α : Type} [LT α]
 : list0 ++ (List.replicate n list1).flatten < list2 := by
   cases n with
   | zero =>
-    cases h2 : list1 with
+    cases list1_def : list1 with
     | nil => simp_all
     | _ =>
       simp
@@ -212,7 +212,7 @@ theorem lt_append_replicate_flatten {α : Type} [LT α]
 theorem expand_mon_dec (h0 : seq ≠ [])
 : expand seq n f < seq := by
   simp [expand]
-  set initseq := seq.dropLast with initseq_def
+  set initSeq := seq.dropLast with initSeq_def
   split
   case h_1 => simp_all
   case h_2 =>
@@ -221,22 +221,22 @@ theorem expand_mon_dec (h0 : seq ≠ [])
     | cons a as ih =>
       cases as with
       | nil =>
-        simp at initseq_def
-        rw [initseq_def]
+        simp at initSeq_def
+        rw [initSeq_def]
         simp
       | cons b bs => simp_all
-  case h_3 seqlast' h3 =>
+  case h_3 seqLast' seqLast'_def =>
     let seqlast := seq.getLast h0
-    set bp' := initseq ++ [seqlast'] with bp'_def
+    set bp' := initSeq ++ [seqLast'] with bp'_def
     have bp'_lt_seq : bp' < seq := by
-      have h : seq = initseq ++ [seqlast'.succ] := by
-        rw [<-(List.getLast_eq_iff_getLast?_eq_some h0).mpr h3]
+      have h : seq = initSeq ++ [seqLast'.succ] := by
+        rw [<-(List.getLast_eq_iff_getLast?_eq_some h0).mpr seqLast'_def]
         exact Eq.symm (List.dropLast_concat_getLast h0)
       rw [h, bp'_def]
       apply List.append_left_lt
       apply List.cons_lt_cons_iff.mpr
       left
-      exact Nat.lt_add_one seqlast'
+      exact Nat.lt_add_one seqLast'
     have seq_length_le_bp'_length : seq.length ≤ bp'.length := by
       rw [bp'_def, List.length_append, List.length_dropLast seq]
       simp
@@ -248,10 +248,10 @@ theorem expand_mon_dec (h0 : seq ≠ [])
       simp [List.replicate]
       exact lt_append_replicate_flatten [] n bp'_lt_seq seq_length_le_bp'_length
     case h_2 parent h8 =>
-      let gp := initseq.take (parent + 1)
-      set bp := (initseq.drop (parent + 1)) ++ [seqlast'] with bp_def
+      let gp := initSeq.take (parent + 1)
+      set bp := (initSeq.drop (parent + 1)) ++ [seqLast'] with bp_def
       have bp'_eq_gp_append_bp : bp' = gp ++ bp := by
-        rw [bp_def, <-List.append_assoc, List.take_append_drop (parent + 1) initseq]
+        rw [bp_def, <-List.append_assoc, List.take_append_drop (parent + 1) initSeq]
       rw [bp'_eq_gp_append_bp] at bp'_lt_seq
       rw [bp'_eq_gp_append_bp] at seq_length_le_bp'_length
       exact lt_append_replicate_flatten gp n bp'_lt_seq seq_length_le_bp'_length
