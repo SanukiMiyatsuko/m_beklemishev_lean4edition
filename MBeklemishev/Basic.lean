@@ -240,7 +240,7 @@ theorem expand_mon_dec (h0 : seq ≠ [])
     have seq_length_le_bp'_length : seq.length ≤ bp'.length := by
       rw [bp'_def, List.length_append, List.length_dropLast seq]
       simp
-      refine Nat.le_of_eq ?_
+      apply Nat.le_of_eq
       refine Eq.symm (Nat.sub_one_add_one_eq_of_pos ?_)
       exact List.length_pos_iff.mpr h0
     split
